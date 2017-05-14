@@ -8,6 +8,10 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
+static void print(string text, MatrixXd& X){
+	cout<<text<<":\n"<<X<<endl;
+}
+
 /**
  * Initializes Unscented Kalman filter
  */
