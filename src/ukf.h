@@ -108,6 +108,12 @@ public:
    * @param meas_package The measurement at k+1
    */
   void UpdateRadar(MeasurementPackage meas_package);
+  
+  
+  void AugmentedSigmaPoints(MatrixXd* Xsig_out);
+  
+  MatrixXd & myImp(MatrixXd & Xsig_aug, VectorXd & x_aug, MatrixXd & L, int n_aug,
+			int lambda);
 };
 
 #endif /* UKF_H */
