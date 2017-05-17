@@ -109,11 +109,14 @@ public:
    */
   void UpdateRadar(MeasurementPackage meas_package);
   
-  
+private:
+  void GenerateSigmaPoints(MatrixXd* Xsig_out);
   void AugmentedSigmaPoints(MatrixXd* Xsig_out);
+  void SigmaPointPrediction(MatrixXd* Xsig_out);
+  void PredictMeanAndCovariance(VectorXd* x_pred, MatrixXd* P_pred);
+  void PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out);
+  void UpdateState(VectorXd* x_out, MatrixXd* P_out);
   
-  MatrixXd & myImp(MatrixXd & Xsig_aug, VectorXd & x_aug, MatrixXd & L, int n_aug,
-			int lambda);
 };
 
 #endif /* UKF_H */
