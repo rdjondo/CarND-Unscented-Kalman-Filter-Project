@@ -260,6 +260,81 @@ static bool testPredictMeanAndCovariance() {
   return test_result_P && test_result_x;
 }
 
+static bool testPredictRadarMeasurement(){
+
+  cout<<"\n#############################"<<endl;
+  cout<<"\n"<<"PredictRadarMeasurement test"<<endl;
+
+  //set measurement dimension, radar can measure r, phi, and r_dot
+  int n_z = 3;
+
+  //mean predicted measurement
+  VectorXd z_pred = VectorXd(n_z);
+  z_pred.fill(0.0);
+
+  //measurement covariance matrix S
+  MatrixXd S_out = MatrixXd(n_z,n_z);
+  S_out.fill(0.0);
+
+  UKF ukf;
+
+
+  //set state dimension
+  ukf.n_x_ = 5;
+
+  //set augmented dimension
+  ukf.n_aug_ = 7;
+
+
+  //define spreading parameter
+  ukf.lambda_= 3 - ukf.n_aug_;
+
+
+  //radar measurement noise standard deviation radius in m
+  ukf.std_radr_ = 0.3;
+
+  //radar measurement noise standard deviation angle in rad
+  ukf.std_radphi_ = 0.0175;
+
+
+  //create example matrix with predicted sigma points
+  ukf.Xsig_pred_ = MatrixXd(ukf.n_x_, 2 * ukf.n_aug_ + 1);
+  ukf.Xsig_pred_.fill(0.0);
+  ukf.Xsig_pred_ <<
+         5.9374,  6.0640,   5.925,  5.9436,  5.9266,  5.9374,  5.9389,  5.9374,  5.8106,  5.9457,  5.9310,  5.9465,  5.9374,  5.9359,  5.93744,
+           1.48,  1.4436,   1.660,  1.4934,  1.5036,    1.48,  1.4868,    1.48,  1.5271,  1.3104,  1.4787,  1.4674,    1.48,  1.4851,    1.486,
+          2.204,  2.2841,  2.2455,  2.2958,   2.204,   2.204,  2.2395,   2.204,  2.1256,  2.1642,  2.1139,   2.204,   2.204,  2.1702,   2.2049,
+         0.5367, 0.47338, 0.67809, 0.55455, 0.64364, 0.54337,  0.5367, 0.53851, 0.60017, 0.39546, 0.51900, 0.42991, 0.530188,  0.5367, 0.535048,
+          0.352, 0.29997, 0.46212, 0.37633,  0.4841, 0.41872,   0.352, 0.38744, 0.40562, 0.24347, 0.32926,  0.2214, 0.28687,   0.352, 0.318159;
+
+
+  ukf.PredictRadarMeasurement(&z_pred, &S_out);
+
+  VectorXd  z_pred_expected= VectorXd(n_z);
+  z_pred_expected << 6.12155,
+      0.245993,
+      2.10313;
+
+  MatrixXd S_expected = MatrixXd(n_z,n_z);
+  S_expected << 0.0946171, -0.000139448, 0.00407016,
+      -0.000139448, 0.000617548, -0.000770652,
+      0.00407016, -0.000770652, 0.0180917;
+
+  double diffZNorm = (z_pred_expected - z_pred).norm();
+  cout<<"diffZNorm"<<endl<<diffZNorm<<endl;
+  bool test_result_x =  diffZNorm < 1e-2;
+  if (test_result_x)   cout << "PASS"<<endl;
+  else cout << "FAIL"<<endl;
+
+  double diffSNorm = (S_expected - S_out).norm();
+  cout<<"diffSNorm"<<endl<<diffSNorm<<endl;
+  test_result_x &=  diffSNorm < 1e-1;
+  if (test_result_x)   cout << "PASS"<<endl;
+  else cout << "FAIL"<<endl;
+
+  return test_result_x;
+}
+
 
 static bool testUpdateState() {
 
@@ -274,6 +349,9 @@ static bool testUpdateState() {
   //set augmented dimension
   ukf.n_aug_ = 7;
 
+  //set measurement dimension, radar can measure r, phi, and r_dot
+  int n_z = 3;
+
   //define spreading parameter
   ukf.lambda_ = 3 - ukf.n_aug_;
 
@@ -286,6 +364,15 @@ static bool testUpdateState() {
          0.5367, 0.47338, 0.67809, 0.55455, 0.64364, 0.54337,  0.5367, 0.53851, 0.60017, 0.39546, 0.51900, 0.42991, 0.530188,  0.5367, 0.535048,
           0.352, 0.29997, 0.46212, 0.37633,  0.4841, 0.41872,   0.352, 0.38744, 0.40562, 0.24347, 0.32926,  0.2214, 0.28687,   0.352, 0.318159;
 
+  //create example vector for predicted state mean
+  ukf.x_ = VectorXd(ukf.n_x_);
+  ukf.x_ <<
+     5.93637,
+     1.49035,
+     2.20528,
+    0.536853,
+    0.353577;
+
   //create expected matrix for predicted state covariance
   ukf.P_ = MatrixXd(ukf.n_x_, ukf.n_x_);
   ukf.P_  <<
@@ -294,6 +381,42 @@ static bool testUpdateState() {
   0.0034157,   0.001492,  0.0058012, 0.00077863, 0.000792973,
  -0.0034819,  0.0098018, 0.00077863,   0.011923,   0.0112491,
  -0.0029937,  0.0079109, 0.00079297,   0.011249,   0.0126972;
+
+
+
+  //create example matrix with sigma points in measurement space
+  MatrixXd Zsig = MatrixXd(n_z, 2 * ukf.n_aug_ + 1);
+  Zsig <<
+      6.1190,  6.2334,  6.1531,  6.1283,  6.1143,  6.1190,  6.1221,  6.1190,  6.0079,  6.0883,  6.1125,  6.1248,  6.1190,  6.1188,  6.12057,
+     0.24428,  0.2337, 0.27316, 0.24616, 0.24846, 0.24428, 0.24530, 0.24428, 0.25700, 0.21692, 0.24433, 0.24193, 0.24428, 0.24515, 0.245239,
+      2.1104,  2.2188,  2.0639,   2.187,  2.0341,  2.1061,  2.1450,  2.1092,  2.0016,   2.129,  2.0346,  2.1651,  2.1145,  2.0786,  2.11295;
+
+  //create example vector for mean predicted measurement
+  VectorXd z_pred = VectorXd(n_z);
+  z_pred <<
+      6.12155,
+     0.245993,
+      2.10313;
+
+  //create example matrix for predicted measurement covariance
+  MatrixXd S = MatrixXd(n_z,n_z);
+  S <<
+      0.0946171, -0.000139448,   0.00407016,
+   -0.000139448,  0.000617548, -0.000770652,
+     0.00407016, -0.000770652,    0.0180917;
+
+  //create example vector for incoming radar measurement
+  VectorXd z = VectorXd(n_z);
+  z <<
+      5.9214,
+      0.2187,
+      2.0062;
+
+
+  VectorXd x_out(ukf.n_x_) ;
+  MatrixXd P_out(ukf.n_x_,ukf.n_x_);
+
+  ukf.UpdateState(Zsig, S, z_pred, z, &x_out, &P_out);
 
   //create expected vector for predicted state mean
   VectorXd x_expected(ukf.n_x_) ;
@@ -313,8 +436,18 @@ static bool testUpdateState() {
       -0.00071719,   0.00358884,   0.00171811,   0.00669426,   0.00881797 ;
 
 
-}
+  double diffPNorm = (P_expected - P_out).norm();
+  cout<<"diffPNorm"<<endl<<diffPNorm<<endl;
+  bool test_result =  diffPNorm < 1e-2;
 
+  double diffXNorm = (x_expected - x_out).norm();
+  cout<<"diffXNorm"<<endl<<diffXNorm<<endl;
+  test_result &=  diffXNorm < 1e-2;
+  if (test_result)   cout << "PASS"<<endl;
+  else cout << "FAIL"<<endl;
+
+  return test_result;
+}
 
 
 
@@ -323,4 +456,6 @@ void test() {
   assert(testAugmentedSigmaPoints()==true);
   assert(testSigmaPointPrediction()==true);
   assert(testPredictMeanAndCovariance()==true);
+  assert(testPredictRadarMeasurement()==true);
+  assert(testUpdateState()==true);
 }
