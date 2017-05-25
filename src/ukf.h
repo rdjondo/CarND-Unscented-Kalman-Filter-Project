@@ -35,6 +35,9 @@ class UKF {
   ///* time when the state is true, in us
   long long time_us_;
 
+  // previous time stamp
+  long long previous_timestamp_;
+
   ///* Process noise standard deviation longitudinal acceleration in m/s^2
   double std_a_;
 
@@ -109,7 +112,6 @@ class UKF {
    */
   void UpdateRadar(MeasurementPackage meas_package);
 
-//private:
   void GenerateSigmaPoints(MatrixXd* Xsig_out);
   void AugmentedSigmaPoints(MatrixXd* Xsig_out);
   void SigmaPointPrediction(MatrixXd& Xsig_aug, MatrixXd* Xsig_out);
@@ -118,6 +120,14 @@ class UKF {
   void UpdateState(MatrixXd& Zsig, MatrixXd& S, VectorXd& z_pred, VectorXd& z,
                    VectorXd* x_out, MatrixXd* P_out);
 
+protected:
+  /**
+   * Init initializes the UKF with the first measurement. This member function
+   * is called by ProcessMeasurment
+   * @param meas_package The first measurement data of either radar or laser
+   *
+   */
+  void Init(MeasurementPackage meas_package);
 };
 
 #endif /* UKF_H */

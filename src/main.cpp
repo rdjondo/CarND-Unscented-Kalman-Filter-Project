@@ -185,8 +185,9 @@ void addStepsOutputDataFile(
 		VectorXd ukf_x_cartesian_ = VectorXd(4);
 		float x_estimate_ = ukf.x_(0);
 		float y_estimate_ = ukf.x_(1);
-		float vx_estimate_ = ukf.x_(2) * cos(ukf.x_(3));
-		float vy_estimate_ = ukf.x_(2) * sin(ukf.x_(3));
+		float angle_phi   = ukf.x_(3);
+		float vx_estimate_ = ukf.x_(2) * cos(angle_phi);
+		float vy_estimate_ = ukf.x_(2) * sin(angle_phi);
 		ukf_x_cartesian_ << x_estimate_, y_estimate_, vx_estimate_, vy_estimate_;
 		estimations.push_back(ukf_x_cartesian_);
 		ground_truth.push_back(gt_pack_list[k].gt_values_);
