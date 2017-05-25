@@ -8,31 +8,23 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
-static void print(string text, MatrixXd& X){
-	cout<<text<<":\n"<<X<<endl;
-}
-
 /**
  * Initializes Unscented Kalman filter
  */
 UKF::UKF() {
+  is_initialized_ = false;
+
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
 
   // if this is false, radar measurements will be ignored (except during init)
   use_radar_ = true;
 
-  // initial state vector
-  x_ = VectorXd(5);
-
-  // initial covariance matrix
-  P_ = MatrixXd(5, 5);
-
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 30;
+  std_a_ = 0.2;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 30;
+  std_yawdd_ = 0.2;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -44,7 +36,7 @@ UKF::UKF() {
   std_radr_ = 0.3;
 
   // Radar measurement noise standard deviation angle in rad
-  std_radphi_ = 0.03;
+  std_radphi_ = 0.0175;
 
   // Radar measurement noise standard deviation radius change in m/s
   std_radrd_ = 0.3;
@@ -61,6 +53,15 @@ UKF::UKF() {
 
   //set augmented dimension
   n_aug_ = 7;
+
+  //define spreading parameter
+  lambda_= 3 - n_aug_;
+
+  // initial state vector
+   x_ = VectorXd(5);
+
+   // initial covariance matrix
+   P_ = MatrixXd(5, 5);
 
 }
 
@@ -136,20 +137,15 @@ void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out) {
   //calculate square root of P
   MatrixXd A = P_.llt().matrixL();
 
-  /*******************************************************************************
-   * Student part begin
-   ******************************************************************************/
-
   //your code goes here
   //calculate sigma points ...
-  Xsig.col(0) = x_;
   MatrixXd x_replicated = x_.replicate(1, 5);
-  MatrixXd Unsc_plus = x_replicated + sqrt(lambda_ + n_x_) * A;
-  MatrixXd Unsc_minus = x_replicated - sqrt(lambda_ + n_x_) * A;
 
   //set sigma points as columns of matrix Xsig
-  Xsig.block(0, 1, n_x_, n_x_) = Unsc_plus;
-  Xsig.block(0, 6, n_x_, n_x_) = Unsc_minus;
+  Xsig.col(0) = x_;
+
+  Xsig.block(0, 1, n_x_, n_x_) = x_replicated + sqrt(lambda_ + n_x_) * A;
+  Xsig.block(0, 6, n_x_, n_x_) = x_replicated - sqrt(lambda_ + n_x_) * A;
 
   //write result
   *Xsig_out = Xsig;
@@ -312,7 +308,7 @@ void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out) {
 }
 
 
-void UKF::PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out) {
+void UKF::PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out, MatrixXd& Zsig ) {
 
   //set measurement dimension, radar can measure r, phi, and r_dot
   int n_z = 3;
@@ -334,8 +330,7 @@ void UKF::PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out) {
   //create matrix for sigma points in measurement space
   cout<<"n_aug_:"<<n_aug_<<endl;
 
-  //MatrixXd Zsig(n_z, 2 * n_aug_ + 1);
-  MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
+  Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
   Zsig.fill(0.0);
 /*******************************************************************************
  * Student part begin
