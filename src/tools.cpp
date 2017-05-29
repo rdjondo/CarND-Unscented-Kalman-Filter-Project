@@ -1,3 +1,5 @@
+#include <vector>
+#include "Eigen/Dense"
 #include <iostream>
 #include "tools.h"
 

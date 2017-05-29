@@ -1,12 +1,6 @@
 #ifndef UKF_H
 #define UKF_H
 
-#include "measurement_package.h"
-#include "Eigen/Dense"
-#include <vector>
-#include <string>
-#include <fstream>
-#include "tools.h"
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -114,7 +108,7 @@ class UKF {
 
   void GenerateSigmaPoints(MatrixXd* Xsig_out);
   void AugmentedSigmaPoints(MatrixXd* Xsig_out);
-  void SigmaPointPrediction(MatrixXd& Xsig_aug, MatrixXd* Xsig_out);
+  void SigmaPointPrediction(MatrixXd& Xsig_aug, MatrixXd* Xsig_out, double delta_t);
   void PredictMeanAndCovariance(VectorXd* x_pred, MatrixXd* P_pred);
   void PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out, MatrixXd& Zsig);
   void UpdateState(MatrixXd& Zsig, MatrixXd& S, VectorXd& z_pred, VectorXd& z,

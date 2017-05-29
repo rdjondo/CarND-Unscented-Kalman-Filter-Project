@@ -1,3 +1,10 @@
+#include "measurement_package.h"
+#include "Eigen/Dense"
+#include <vector>
+#include <string>
+#include <fstream>
+#include "tools.h"
+
 #include "test.h"
 #include "ukf.h"
 
@@ -17,11 +24,12 @@ static bool testGenerateSigmaPoints() {
 
   //set example state
   ukf.x_ = VectorXd(ukf.n_x_);
-  ukf.x_ <<   5.7441,
-           1.3800,
-           2.2049,
-           0.5015,
-           0.3528;
+  ukf.x_.fill(0.0);
+  ukf.x_ << 5.7441,
+            1.3800,
+            2.2049,
+            0.5015,
+            0.3528;
 
   //set example covariance matrix
   ukf.P_ = MatrixXd(ukf.n_x_, ukf.n_x_);
@@ -31,8 +39,12 @@ static bool testGenerateSigmaPoints() {
 			  -0.0022,    0.0071,    0.0007,    0.0098,    0.0100,
 			  -0.0020,    0.0060,    0.0008,    0.0100,    0.0123;
 
+
+
+  //re-define spreading parameter as a function of number non-augmentated dimensions of the state vector
+  ukf.lambda_= 3 - ukf.n_x_;
   ukf.GenerateSigmaPoints(&Xsig);
-  cout << Xsig << endl;
+  cout << "Xsig :" << endl << Xsig << endl;
 
   MatrixXd Xsig_expected(ukf.n_x_, 2 * ukf.n_x_ + 1);
 	Xsig_expected <<
@@ -46,7 +58,7 @@ static bool testGenerateSigmaPoints() {
 
   double diffNorm = (Xsig_expected - Xsig).norm();
   cout<<"diffNorm"<<endl<<diffNorm<<endl;
-  bool test_result =  diffNorm < 5e-1;
+  bool test_result =  fabs(diffNorm) < 5e-1;
   if (test_result)   cout << "PASS"<<endl;
   else cout << "FAIL"<<endl;
 
@@ -85,8 +97,10 @@ static bool testAugmentedSigmaPoints() {
 
   MatrixXd Xsig_aug;
 
+  //re-define spreading parameter as a function of number non-augmentated dimensions of the state vector
+  ukf.lambda_= 3 - ukf.n_aug_;
   ukf.AugmentedSigmaPoints(&Xsig_aug);
-    cout << Xsig_aug << endl;
+    cout<<Xsig_aug<<endl << Xsig_aug << endl;
 
 
   /* expected result:
@@ -139,8 +153,10 @@ static bool testSigmaPointPrediction() {
          0,        0,        0,        0,        0,        0,        0,  0.34641,         0,        0,        0,        0,        0,        0, -0.34641;
 
   //call function under test
-  MatrixXd Xsig_pred;
-  ukf.SigmaPointPrediction(Xsig_aug, &Xsig_pred);
+  MatrixXd Xsig_pred(ukf.n_x_, 2 * ukf.n_aug_ + 1);
+
+  double delta_t = 0.1;  //compute time diff in sec
+  ukf.SigmaPointPrediction(Xsig_aug, &Xsig_pred, delta_t);
 
   cout << "\nXsig_pred:\n" << Xsig_pred << endl;
 
@@ -153,7 +169,7 @@ static bool testSigmaPointPrediction() {
           0.352, 0.29997, 0.46212, 0.37633,  0.4841, 0.41872,   0.352, 0.38744, 0.40562, 0.24347, 0.32926,  0.2214, 0.28687,   0.352, 0.318159;
 
   double diffNorm = (Xsig_pred_expected - Xsig_pred).norm();
-  cout<<"diffNorm"<<endl<<diffNorm<<endl;
+  cout<<"diffNorm:"<<endl<<diffNorm<<endl;
   bool test_result =  diffNorm < 1e-1;
   if (test_result)   cout << "PASS"<<endl;
   else cout << "FAIL"<<endl;
@@ -365,7 +381,8 @@ static bool testUpdateState() {
 
   VectorXd x_out(ukf.n_x_) ;
   MatrixXd P_out(ukf.n_x_,ukf.n_x_);
-
+  //x_out = ukf.x_;
+  //P_out = ukf.P_;
   ukf.UpdateState(Zsig, S, z_pred, z, &x_out, &P_out);
 
   //create expected vector for predicted state mean
@@ -404,8 +421,6 @@ static bool integrateSteps(){
   cout<<"\n#############################"<<endl;
   cout<<endl<<"integrateSteps test"<<endl;
 
-  MatrixXd Xsig(5, 11);
-  Xsig.fill(0.0);
   UKF ukf;
 
   //set example state
@@ -425,49 +440,43 @@ static bool integrateSteps(){
         -0.0022,    0.0071,    0.0007,    0.0098,    0.0100,
         -0.0020,    0.0060,    0.0008,    0.0100,    0.0123;
 
+  MatrixXd Xsig(5, 11);
+  Xsig.fill(0.0);
   ukf.GenerateSigmaPoints(&Xsig);
 
   MatrixXd Xsig_aug;
   ukf.AugmentedSigmaPoints(&Xsig_aug);
 
+	double delta_t = 0.1;  //compute time diff in sec
+	ukf.SigmaPointPrediction(Xsig_aug, &ukf.Xsig_pred_, delta_t);
 
-  ukf.SigmaPointPrediction(Xsig_aug, &ukf.Xsig_pred_);
+	VectorXd x_pred;
+	MatrixXd P_pred_out;
+	ukf.PredictMeanAndCovariance(&x_pred, &P_pred_out);
 
+	//set measurement dimension, radar can measure r, phi, and r_dot
+	const int n_z = 3;
 
+	VectorXd z_pred = VectorXd(n_z);
+	z_pred.fill(0.0);
 
-  VectorXd x_pred ;
-  MatrixXd P_out ;
-  ukf.PredictMeanAndCovariance(&x_pred, &P_out);
+	//measurement covariance matrix S
+	MatrixXd S = MatrixXd(n_z, n_z);
+	S.fill(0.0);
 
+	MatrixXd Zsig;
+	ukf.PredictRadarMeasurement(&z_pred, &S, Zsig);
 
-  //set measurement dimension, radar can measure r, phi, and r_dot
-  const int n_z = 3;
-
-  VectorXd z_pred = VectorXd(n_z);
-  z_pred.fill(0.0);
-
-
-  //measurement covariance matrix S
-  MatrixXd S = MatrixXd(n_z,n_z);
-  S.fill(0.0);
-
-  MatrixXd Zsig;
-  ukf.PredictRadarMeasurement(&z_pred, &S, Zsig);
-
-
-
-  //create example vector for incoming radar measurement
+	//create example vector for incoming radar measurement
   VectorXd z = VectorXd(n_z);
   z <<
       5.9214,
       0.2187,
       2.0062;
-  ukf.UpdateState(Zsig, S, z_pred, z, &x_pred, &P_out);
+	ukf.UpdateState(Zsig, S, z_pred, z, &x_pred, &P_pred_out);
 
-
-
-  //create expected vector for predicted state mean
-  VectorXd x_expected(ukf.n_x_) ;
+	//create expected vector for predicted state mean
+	VectorXd x_expected(ukf.n_x_) ;
   x_expected <<
        5.92276,
        1.41823,
@@ -484,7 +493,7 @@ static bool integrateSteps(){
       -0.00071719,   0.00358884,   0.00171811,   0.00669426,   0.00881797 ;
 
 
-  double diffPNorm = (P_expected - P_out).norm();
+  double diffPNorm = (P_expected - P_pred_out).norm();
   cout<<"diffPNorm"<<endl<<diffPNorm<<endl;
   bool test_result =  diffPNorm < 1e-2;
 
