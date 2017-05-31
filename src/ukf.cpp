@@ -17,78 +17,79 @@ using std::vector;
  * Initializes Unscented Kalman filter
  */
 UKF::UKF() {
-  is_initialized_ = false;
+	is_initialized_ = false;
 
-  // if this is false, laser measurements will be ignored (except during init)
-  use_laser_ = true;
+	// if this is false, laser measurements will be ignored (except during init)
+	use_laser_ = true;
 
-  // if this is false, radar measurements will be ignored (except during init)
-  use_radar_ = true;
+	// if this is false, radar measurements will be ignored (except during init)
+	use_radar_ = true;
 
-  // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 0.2;
+	// Process noise standard deviation longitudinal acceleration in m/s^2
+	std_a_ = 0.2;
 
-  // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 0.2;
+	// Process noise standard deviation yaw acceleration in rad/s^2
+	std_yawdd_ = 0.2;
 
-  // Laser measurement noise standard deviation position1 in m
-  std_laspx_ = 0.15;
+	// Laser measurement noise standard deviation position1 in m
+	std_laspx_ = 0.05;
 
-  // Laser measurement noise standard deviation position2 in m
-  std_laspy_ = 0.15;
+	// Laser measurement noise standard deviation position2 in m
+	std_laspy_ = 0.05;
 
-  // Radar measurement noise standard deviation radius in m
-  std_radr_ = 0.3;
+	// Radar measurement noise standard deviation radius in m
+	std_radr_ = 0.3;
 
-  // Radar measurement noise standard deviation angle in rad
-  std_radphi_ = 0.0175;
+	// Radar measurement noise standard deviation angle in rad
+	std_radphi_ = 0.0175;
 
-  // Radar measurement noise standard deviation radius change in m/s
-  std_radrd_ = 0.3;
+	// Radar measurement noise standard deviation radius change in m/s
+	std_radrd_ = 0.3;
 
-  /**
-  TODO:
+	//set state dimension
+	n_x_ = 5;
 
-  Complete the initialization. See ukf.h for other member properties.
+	//set augmented dimension
+	n_aug_ = 7;
 
-  Hint: one or more values initialized above might be wildly off...
-  */
-  //set state dimension
-  n_x_ = 5;
+	//define spreading parameter
+	lambda_ = 3 - n_x_;
 
-  //set augmented dimension
-  n_aug_ = 7;
+	// initial state vector
+	x_ = VectorXd(n_x_);
 
-  //define spreading parameter
-  lambda_= 3 - n_x_;
+	// initial covariance matrix
+	P_ = MatrixXd(n_x_, n_x_);
+	P_.fill(0.0);
+	P_.diagonal().fill(1.0);
 
-  // initial state vector
-   x_ = VectorXd(n_x_);
+	//Initialize vector for Unscented Transform weights
+	weights_ = VectorXd(2 * n_aug_ + 1);
 
-   // initial covariance matrix
-   P_ = MatrixXd(n_x_, n_x_);
-   P_.fill(0.0);
-   P_.diagonal().fill(1.0);
+	// set weights
+	weights_(0) = lambda_ / (lambda_ + n_aug_);
+	double w_i = 1 / (2 * (lambda_ + n_aug_));
+	for (int i = 1; i < 2 * n_aug_ + 1; i++) {
+		weights_(i) = w_i;
+	}
 
+	cout << "Initial val for P:" << P_ << endl;
 
-   //Initialize vector for Unscented Transform weights
-   weights_ = VectorXd(2*n_aug_+1);
+	//measurement matrix
+	H_ = MatrixXd(2, 5);
+	H_ << 1, 0, 0, 0, 0,
+		  0, 1, 0, 0, 0;
 
-   // set weights
-   weights_(0) = lambda_/(lambda_ + n_aug_);
-   double w_i = 1/(2*(lambda_ + n_aug_));
-   for(int i=1; i<2*n_aug_ + 1; i++){
-     weights_(i) = w_i;
-   }
-
-   cout<<"Initial val for P:"<<P_<<endl;
-
+	//measurement covariance matrix - laser
+	R_laser_ = MatrixXd(2,2);
+	R_laser_ << std_laspx_*std_laspx_, 0,
+				0,  std_laspy_*std_laspy_;
 
 }
 
 UKF::~UKF() {}
 
-void UKF::Init(MeasurementPackage meas_package){
+void UKF::Init(MeasurementPackage meas_package) {
 	if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
 		/**
 		 Convert radar from polar to cartesian coordinates and initialize state.
@@ -218,18 +219,9 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   You'll also need to calculate the lidar NIS.
   */
 
-	  /**
-	    * update the state by using Kalman Filter equations
-	  *///measurement matrix
-	MatrixXd H_ = MatrixXd(2, 5);
-	H_ << 1, 0, 0, 0, 0,
-		  0, 1, 0, 0, 0;
-
-
-	//measurement covariance matrix - laser
-	MatrixXd R_laser_ = MatrixXd(2,2);
-	R_laser_ << std_laspx_*std_laspx_, 0,
-			    0,  std_laspy_*std_laspy_;
+	/**
+	* update the state by using Kalman Filter equations
+	*/
 
 	// From predicted state to predicted measurememt
 	VectorXd z_pred = H_ * x_;
@@ -428,7 +420,6 @@ void UKF::SigmaPointPrediction(MatrixXd & Xsig_aug, MatrixXd* Xsig_out, double d
 void UKF::PredictMeanAndCovariance(VectorXd* x_pred_out, MatrixXd* P_out) {
 
 	//predict state mean
-	cout<<"Xsig_pred_ rows:"<<Xsig_pred_.rows()<<"  Xsig_pred_ cols:"<<Xsig_pred_.cols()<<endl;
 	x_ = (Xsig_pred_ * weights_);
 
 	//predicted state covariance matrix
@@ -453,10 +444,7 @@ void UKF::PredictMeanAndCovariance(VectorXd* x_pred_out, MatrixXd* P_out) {
 void UKF::PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out, MatrixXd& Zsig ) {
 
   //set measurement dimension, radar can measure r, phi, and r_dot
-  int n_z = 3;
-
-  //radar measurement noise standard deviation radius change in m/s
-  double std_radrd = 0.1;
+  const int n_z = 3;
 
   //create matrix for sigma points in measurement space
   cout<<"n_aug_:"<<n_aug_<<endl;
