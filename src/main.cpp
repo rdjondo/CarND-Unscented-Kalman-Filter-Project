@@ -224,9 +224,6 @@ int main(int argc, char* argv[]) {
 
 		importData(in_file_, measurement_pack_list, gt_pack_list);
 
-		// TODO:start filtering from the second frame (the speed is unknown in the first
-		// frame)
-
 		// Set column names for output file
 		headerOutputDataFile(out_file_);
 
@@ -242,7 +239,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		cout << "Done!\n"
-				"Your px, py, vx, and vy RMSE should be less than or equal to the values \n"
+				"The px, py, vx, and vy RMSE should be less than or equal to the values \n"
 				"[.09, .10, .40, .30]." << endl;
 	}
 	return 0;
