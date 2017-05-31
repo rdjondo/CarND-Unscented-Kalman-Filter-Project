@@ -201,7 +201,7 @@ void addStepsOutputDataFile(
 }
 
 int main(int argc, char* argv[]) {
-	const bool TESTING = true;
+	const bool TESTING = false;
 
 	if (TESTING) {
 		test();
@@ -241,7 +241,9 @@ int main(int argc, char* argv[]) {
 			in_file_.close();
 		}
 
-		cout << "Done!" << endl;
+		cout << "Done!\n"
+				"Your px, py, vx, and vy RMSE should be less than or equal to the values \n"
+				"[.09, .10, .40, .30]." << endl;
 	}
 	return 0;
 }

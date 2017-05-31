@@ -58,7 +58,7 @@ static bool testGenerateSigmaPoints() {
 
   double diffNorm = (Xsig_expected - Xsig).norm();
   cout<<"diffNorm"<<endl<<diffNorm<<endl;
-  bool test_result =  fabs(diffNorm) < 5e-1;
+  bool test_result =  fabs(diffNorm) < 1e-4;
   if (test_result)   cout << "PASS"<<endl;
   else cout << "FAIL"<<endl;
 
@@ -103,17 +103,6 @@ static bool testAugmentedSigmaPoints() {
     cout<<Xsig_aug<<endl << Xsig_aug << endl;
 
 
-  /* expected result:
-     Xsig_aug =
-  5.7441,  5.85768,   5.7441,   5.7441,   5.7441,   5.7441,   5.7441,   5.7441,  5.63052,   5.7441,   5.7441,   5.7441,   5.7441,   5.7441,   5.7441
-    1.38,  1.34566,  1.52806,     1.38,     1.38,     1.38,     1.38,     1.38,  1.41434,  1.23194,     1.38,     1.38,     1.38,     1.38,     1.38
-  2.2049,  2.28414,  2.24557,  2.29582,   2.2049,   2.2049,   2.2049,   2.2049,  2.12566,  2.16423,  2.11398,   2.2049,   2.2049,   2.2049,   2.2049
-  0.5015,  0.44339, 0.631886, 0.516923, 0.595227,   0.5015,   0.5015,   0.5015,  0.55961, 0.371114, 0.486077, 0.407773,   0.5015,   0.5015,   0.5015
-  0.3528, 0.299973, 0.462123, 0.376339,  0.48417, 0.418721,   0.3528,   0.3528, 0.405627, 0.243477, 0.329261,  0.22143, 0.286879,   0.3528,   0.3528
-     0,        0,        0,        0,        0,        0,  0.34641,        0,        0,        0,        0,        0,        0, -0.34641,        0
-     0,        0,        0,        0,        0,        0,        0,  0.34641,        0,        0,        0,        0,        0,        0, -0.34641
-  */
-
   MatrixXd Xsig_expected = MatrixXd(ukf.n_aug_ , 2 * ukf.n_aug_ + 1);
 
   Xsig_expected <<
@@ -126,7 +115,10 @@ static bool testAugmentedSigmaPoints() {
            0,        0,        0,        0,        0,        0,        0,  0.34641,        0,        0,        0,        0,        0,        0, -0.34641;
   cout << "\nXsig_expected:\n" << Xsig_expected << endl;
 
-  bool test_result = (Xsig_expected - Xsig_aug).norm() < 1e-5;
+
+  double diffNorm = (Xsig_expected - Xsig_aug).norm();
+  cout<<"diffNorm"<<endl<<diffNorm<<endl;
+  bool test_result =  fabs(diffNorm) < 1e-4;
   if (test_result)   cout << "PASS"<<endl;
   else cout << "FAIL"<<endl;
 
@@ -254,6 +246,8 @@ static bool testPredictRadarMeasurement(){
 
   UKF ukf;
 
+  //radar measurement noise standard deviation radius change in m/s
+  ukf.std_radrd_ = 0.1;
 
 
   //radar measurement noise standard deviation radius in m
@@ -405,47 +399,47 @@ static bool testUpdateState() {
 
   double diffPNorm = (P_expected - P_out).norm();
   cout<<"diffPNorm"<<endl<<diffPNorm<<endl;
-  bool test_result =  diffPNorm < 1e-2;
+  bool test_result =  diffPNorm < 2e-2;
 
   double diffXNorm = (x_expected - x_out).norm();
   cout<<"diffXNorm"<<endl<<diffXNorm<<endl;
-  test_result &=  diffXNorm < 1e-2;
+  test_result &=  diffXNorm < 5e-2;
   if (test_result)   cout << "PASS"<<endl;
   else cout << "FAIL"<<endl;
 
   return test_result;
 }
 
-static bool integrateSteps(){
+static bool integrateSteps() {
 
-  cout<<"\n#############################"<<endl;
-  cout<<endl<<"integrateSteps test"<<endl;
+	cout << "\n#############################" << endl;
+	cout << endl << "integrateSteps test" << endl;
 
-  UKF ukf;
+	UKF ukf;
 
-  //set example state
-  ukf.x_ = VectorXd(ukf.n_x_);
-  ukf.x_ <<   5.7441,
-           1.3800,
-           2.2049,
-           0.5015,
-           0.3528;
+	//set example state
+	ukf.x_ = VectorXd(ukf.n_x_);
+	ukf.x_ <<   5.7441,
+		   1.3800,
+		   2.2049,
+		   0.5015,
+		   0.3528;
 
-  //set example covariance matrix
-  ukf.P_ = MatrixXd(ukf.n_x_, ukf.n_x_);
-  ukf.P_ <<
-         0.0043,   -0.0013,    0.0030,   -0.0022,   -0.0020,
-        -0.0013,    0.0077,    0.0011,    0.0071,    0.0060,
-         0.0030,    0.0011,    0.0054,    0.0007,    0.0008,
-        -0.0022,    0.0071,    0.0007,    0.0098,    0.0100,
-        -0.0020,    0.0060,    0.0008,    0.0100,    0.0123;
+	//set example covariance matrix
+	ukf.P_ = MatrixXd(ukf.n_x_, ukf.n_x_);
+	ukf.P_ <<
+		 0.0043,   -0.0013,    0.0030,   -0.0022,   -0.0020,
+		-0.0013,    0.0077,    0.0011,    0.0071,    0.0060,
+		 0.0030,    0.0011,    0.0054,    0.0007,    0.0008,
+		-0.0022,    0.0071,    0.0007,    0.0098,    0.0100,
+		-0.0020,    0.0060,    0.0008,    0.0100,    0.0123;
 
   MatrixXd Xsig(5, 11);
-  Xsig.fill(0.0);
-  ukf.GenerateSigmaPoints(&Xsig);
+	Xsig.fill(0.0);
+	ukf.GenerateSigmaPoints(&Xsig);
 
-  MatrixXd Xsig_aug;
-  ukf.AugmentedSigmaPoints(&Xsig_aug);
+	MatrixXd Xsig_aug;
+	ukf.AugmentedSigmaPoints(&Xsig_aug);
 
 	double delta_t = 0.1;  //compute time diff in sec
 	ukf.SigmaPointPrediction(Xsig_aug, &ukf.Xsig_pred_, delta_t);

@@ -26,6 +26,15 @@ class UKF {
   ///* predicted sigma points matrix
   MatrixXd Xsig_pred_;
 
+  //Lidar Measurement covariance matrix - laser
+  MatrixXd R_laser_;
+
+  // Lidar measurement matrix
+  MatrixXd H_;
+
+  // Weigths for calculating the Unscented Kalman Transform
+  VectorXd weights_;
+
   ///* time when the state is true, in us
   long long time_us_;
 
@@ -52,9 +61,6 @@ class UKF {
 
   ///* Radar measurement noise standard deviation radius change in m/s
   double std_radrd_;
-
-  ///* Weights of sigma points
-  VectorXd weights_;
 
   ///* State dimension
   int n_x_;
