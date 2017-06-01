@@ -29,6 +29,9 @@ class UKF {
   //Lidar Measurement covariance matrix - laser
   MatrixXd R_laser_;
 
+  //add measurement noise covariance matrix -radar
+  MatrixXd R_radar_;
+
   // Lidar measurement matrix
   MatrixXd H_;
 

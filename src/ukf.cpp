@@ -73,15 +73,28 @@ UKF::UKF() {
 		weights_(i) = w_i;
 	}
 
-	//measurement matrix
-	H_ = MatrixXd(2, 5);
+
+	//set radar measurement dimension, radar can measure x and y
+	const int n_z_laser = 2;
+
+	//Laser measurement matrix
+	H_ = MatrixXd(n_z_laser, n_x_);
 	H_ << 1, 0, 0, 0, 0,
 		  0, 1, 0, 0, 0;
 
 	//measurement covariance matrix - laser
-	R_laser_ = MatrixXd(2,2);
+	R_laser_ = MatrixXd(n_z_laser, n_z_laser);
 	R_laser_ << std_laspx_*std_laspx_, 0,
 				0,  std_laspy_*std_laspy_;
+
+	//set radar measurement dimension, radar can measure r, phi, and r_dot
+	const int n_z_radar = 3;
+
+	// measurement noise covariance matrix
+	R_radar_ = MatrixXd(n_z_radar, n_z_radar);
+	R_radar_ << std_radr_*std_radr_, 0, 0,
+			  0, std_radphi_*std_radphi_, 0,
+			  0, 0,std_radrd_*std_radrd_;
 
 }
 
@@ -437,6 +450,10 @@ void UKF::PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out,
 		double v2 = sin(yaw) * v;
 
 		// measurement model
+		if (fabs(p_x) < 1e-3)
+			p_x = 1e-3;
+		if (fabs(p_y) < 1e-3)
+			p_y = 1e-3;
 		Zsig(0, i) = sqrt(p_x * p_x + p_y * p_y);                        //r
 		Zsig(1, i) = atan2(p_y, p_x);                                 //phi
 		Zsig(2, i) = (p_x * v1 + p_y * v2) / sqrt(p_x * p_x + p_y * p_y); //r_dot
@@ -464,11 +481,7 @@ void UKF::PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out,
 	}
 
     //add measurement noise covariance matrix
-	MatrixXd R = MatrixXd(n_z,n_z);
-	R <<    std_radr_*std_radr_, 0, 0,
-		  0, std_radphi_*std_radphi_, 0,
-		  0, 0,std_radrd_*std_radrd_;
-	S = S + R;
+	S = S + R_radar_;
 
 	//write result
 	*z_out = z_pred;
